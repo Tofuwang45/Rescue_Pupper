@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+
+# API Keys - NEVER commit these!
+config/api_keys.py
+**/api_keys.py
+*.env
+.env
+.env.local
+
+# Logs
+*.log
+/tmp/
+hailort.log
+ros2_test.log
+hailo_test.log
+tracking_test.log
+foxglove_test.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ROS
+install/
+log/
+build/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
