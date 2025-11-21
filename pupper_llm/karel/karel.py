@@ -246,7 +246,7 @@ class KarelPupper:
         move_cmd = Twist()
         move_cmd.angular.z = -1.5
         self.publisher.publish(move_cmd)
-        rclpy.spin_once(self.node, timeout_sec=0.01)  
+        rclpy.spin_once(self.node, timeout_sec=1)
         self.stop()
 
     def bark(self):

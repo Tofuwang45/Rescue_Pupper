@@ -30,9 +30,6 @@ SAVED_IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'saved_images')
 IMAGE_CHECK_INTERVAL = 0.5  # Check for new images every 0.5 seconds
 CENTER_THRESHOLD = 0.05  # Consider centered if offset is within 5% of image width
 MIN_ROTATION_OFFSET = 0.02  # Minimum offset to trigger rotation (2% of image width)
-TURN_LEFT_DURATION = 1.0  # Duration of turn_left() in seconds
-TURN_RIGHT_DURATION = 0.01  # Duration of turn_right() in seconds (very short!)
-TURN_RIGHT_MULTIPLIER = 50  # Multiply turn_right calls to compensate for short duration
 
 
 class ThermalTracker:
@@ -156,7 +153,6 @@ class ThermalTracker:
     def rotate_to_center(self, offset: float):
         """
         Rotate Pupper to center the hottest region using turn_left/turn_right methods.
-        Turns proportionally based on offset magnitude to center the hot point in next frame.
         
         Args:
             offset: Normalized horizontal offset (-0.5 to 0.5)
@@ -183,32 +179,15 @@ class ThermalTracker:
             self.pupper.stop()
             return
         
-        # Calculate number of turns needed based on offset magnitude
-        # Larger offset = more turns needed to center the hot point in next frame
-        # Scale: 0.5 offset (max) = ~4-5 turns, 0.1 offset = ~1-2 turns
-        abs_offset = abs(offset)
-        num_turns = max(1, int(abs_offset * 10))  # Scale factor to ensure we turn enough
-        
         # Determine rotation direction
         # Negative offset means hot region is to the left, so rotate left
         # Positive offset means hot region is to the right, so rotate right
         if offset < 0:
-            logger.info(f"Rotating LEFT {num_turns} time(s) (offset: {offset:.3f})")
-            for i in range(num_turns):
-                self.pupper.turn_left()
-                if i < num_turns - 1:  # Don't sleep after last turn
-                    time.sleep(0.05)  # Small delay between turns
+            logger.info(f"Rotating LEFT (offset: {offset:.3f})")
+            self.pupper.turn_left()
         else:
-            # turn_right has very short timeout (0.01s), so we need to call it many times
-            # to get equivalent rotation duration to turn_left
-            # Use a reasonable multiplier: 20-30 calls per turn should give decent rotation
-            calls_per_turn = 25  # Reasonable number to compensate for short timeout
-            total_calls = num_turns * calls_per_turn
-            logger.info(f"Rotating RIGHT {num_turns} effective turn(s) ({total_calls} calls) (offset: {offset:.3f})")
-            for i in range(total_calls):
-                self.pupper.turn_right()
-                if i < total_calls - 1:  # Don't sleep after last call
-                    time.sleep(0.002)  # Small delay to allow rotation to execute
+            logger.info(f"Rotating RIGHT (offset: {offset:.3f})")
+            self.pupper.turn_right()
     
     def process_image(self, image_path: str):
         """
