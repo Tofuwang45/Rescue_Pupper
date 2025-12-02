@@ -180,14 +180,14 @@ class ThermalTracker:
             return
         
         # Determine rotation direction
-        # Negative offset means hot region is to the left, so rotate left
-        # Positive offset means hot region is to the right, so rotate right
+        # Negative offset means hot region is to the left, so rotate RIGHT to point camera right (bringing left-side hot region toward center)
+        # Positive offset means hot region is to the right, so rotate LEFT to point camera left (bringing right-side hot region toward center)
         if offset < 0:
-            logger.info(f"Rotating LEFT (offset: {offset:.3f})")
-            self.pupper.turn_left()
-        else:
-            logger.info(f"Rotating RIGHT (offset: {offset:.3f})")
+            logger.info(f"Hot region LEFT of center (offset: {offset:.3f}), rotating RIGHT")
             self.pupper.turn_right()
+        else:
+            logger.info(f"Hot region RIGHT of center (offset: {offset:.3f}), rotating LEFT")
+            self.pupper.turn_left()
     
     def process_image(self, image_path: str):
         """
