@@ -41,7 +41,8 @@ install/
 log/
 build/
 
-# Temporary files
+# files
+*.png
 *.tmp
 *.bak
 *.backup
