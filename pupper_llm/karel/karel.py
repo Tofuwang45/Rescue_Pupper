@@ -232,9 +232,9 @@ class KarelPupper:
         - Use move() or build your own move_cmd.
         """
         move_cmd = Twist()
-        move_cmd.angular.z = 0.3  # Reduced angular velocity for granular turns
+        move_cmd.angular.z = 0.6  # Increased angular velocity for more substantial turns
         self.publisher.publish(move_cmd)
-        rclpy.spin_once(self.node, timeout_sec=0.15)  # Shorter duration for fine control
+        rclpy.spin_once(self.node, timeout_sec=0.5)  # Longer duration for more rotation
         self.stop()
 
     def turn_right(self):
@@ -244,9 +244,9 @@ class KarelPupper:
         - Use move() or make your own Twist message.
         """
         move_cmd = Twist()
-        move_cmd.angular.z = -0.3  # Reduced angular velocity for granular turns
+        move_cmd.angular.z = -0.6  # Increased angular velocity for more substantial turns
         self.publisher.publish(move_cmd)
-        rclpy.spin_once(self.node, timeout_sec=0.15)  # Shorter duration for fine control
+        rclpy.spin_once(self.node, timeout_sec=0.5)  # Longer duration for more rotation
         self.stop()
 
     def bark(self):
