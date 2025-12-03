@@ -5,6 +5,7 @@ Reads data from a serial port and prints it to the terminal.
 """
 
 import serial
+import serial.tools.list_ports
 import sys
 import argparse
 from datetime import datetime
@@ -45,6 +46,8 @@ def read_serial(port, baudrate=115200, timeout=1):
                     
     except serial.SerialException as e:
         print(f"Error opening serial port: {e}")
+        print("\nAvailable ports:")
+        list_serial_ports()
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n\nStopped by user")
@@ -56,8 +59,6 @@ def read_serial(port, baudrate=115200, timeout=1):
 
 def list_serial_ports():
     """List available serial ports."""
-    import serial.tools.list_ports
-    
     ports = serial.tools.list_ports.comports()
     
     if not ports:
@@ -80,9 +81,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python serial_reader.py /dev/ttyUSB0
-  python serial_reader.py COM3 -b 9600
-  python serial_reader.py --list
+  python read_data.py /dev/ttyUSB0
+  python read_data.py COM3 -b 9600
+  python read_data.py --list
         """
     )
     

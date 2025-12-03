@@ -300,7 +300,11 @@ class KarelPupper:
         rclpy.spin_once(self.node, timeout_sec=1.0)
     
     def __del__(self):
-        self.node.get_logger().info('Tearing down...')
-        self.node.destroy_node()
-        rclpy.shutdown()
+        try:
+            self.node.get_logger().info('Tearing down...')
+            self.node.destroy_node()
+        except Exception:
+            pass
+        # Don't call rclpy.shutdown() here - let the main program handle it
+        # Multiple shutdown calls cause "Context must be initialized" errors
 
