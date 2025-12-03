@@ -51,7 +51,7 @@ class SensorMonitorNode(Node):
         
         self.get_logger().info(f'Sensor Monitor Node initialized')
         self.get_logger().info(f'Will monitor {port} at {baudrate} baud')
-        self.get_logger().info(f'Behavior: Error → Walk Forward | Valid → Bark + Turn Left')
+        self.get_logger().info(f'Behavior: Error → Walk Forward | Valid → Bark + Avoid Obstacle (Left 90° → Forward → Right 90°)')
         
     def start_monitoring(self):
         """Start monitoring the serial port in a separate thread."""
@@ -103,12 +103,12 @@ class SensorMonitorNode(Node):
                             self.get_logger().info(f'[{timestamp}] Sensor 1: {sensor1_data} ({status})')
                             
                             if is_valid:
-                                # Valid data detected - bark and turn left
+                                # Valid data detected - obstacle avoidance maneuver
                                 if self.last_was_error:
                                     self.get_logger().info('🔔 Sensor 1 recovered from error!')
-                                self.get_logger().info('✓ Valid data - Bark + Turn Left!')
+                                self.get_logger().info('✓ Valid data - Obstacle detected! Starting avoidance maneuver...')
                                 self.should_bark = True
-                                self.bark_queue.put('turn_left')
+                                self.bark_queue.put('avoid_obstacle')
                                 self.last_was_error = False
                             else:
                                 # Error detected - walk forward
@@ -203,14 +203,28 @@ class SensorMonitorNode(Node):
             while not self.bark_queue.empty():
                 command = self.bark_queue.get_nowait()
                 
-                if command == 'turn_left':
-                    # Valid data - bark and turn left
-                    self.get_logger().info('🐕 Barking and turning left!')
+                if command == 'avoid_obstacle':
+                    # Obstacle detected - perform avoidance maneuver
+                    self.get_logger().info('🐕 Barking! Obstacle detected!')
                     self.pupper.bark()
+                    
+                    # Step 1: Turn left 90 degrees
+                    self.get_logger().info('↰ Step 1: Turning left 90°')
                     self.pupper.turn_left()
+                    
+                    # Step 2: Walk forward a moderate amount
+                    self.get_logger().info('➡️ Step 2: Walking forward')
+                    self.pupper.move_forward()
+                    
+                    # Step 3: Turn right 90 degrees (back to original direction)
+                    self.get_logger().info('↱ Step 3: Turning right 90° (returning to original heading)')
+                    self.pupper.turn_right()
+                    
+                    self.get_logger().info('✅ Obstacle avoidance maneuver complete!')
+                    
                 elif command == 'walk_forward':
                     # Error detected - walk forward
-                    self.get_logger().info('➡️ Walking forward (error state)')
+                    self.get_logger().info('➡️ Walking forward (no obstacle)')
                     self.pupper.move_forward()
                     
         except queue.Empty:
