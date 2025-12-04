@@ -2,7 +2,10 @@
 """
 Sensor Monitor Node
 Monitors serial sensor data and triggers robot actions based on sensor readings.
-When data is received from sensor 1 (non-error), the robot will bark.
+When an obstacle is detected (valid sensor 1 data), the robot will:
+1. Bark once
+2. Continuously move left until the path is clear (sensor shows error = no obstacle)
+3. Move forward once the path is clear
 """
 
 import rclpy
@@ -23,7 +26,7 @@ import pupper_llm.karel.karel as karel
 class SensorMonitorNode(Node):
     """ROS2 node that monitors serial sensor and triggers robot actions."""
     
-    def __init__(self, port='/dev/ttyACM0', baudrate=115200, timeout=1):
+    def __init__(self, port='/dev/ttyACM1', baudrate=115200, timeout=1):
         super().__init__('sensor_monitor_node')
         
         # Initialize KarelPupper for robot control
@@ -45,13 +48,14 @@ class SensorMonitorNode(Node):
         # Track current state - should we be barking?
         self.should_bark = False
         self.last_was_error = True  # Start assuming error state
+        self.avoiding_obstacle = False  # Track if we're in obstacle avoidance mode
         
         # Create a timer to check for bark requests
         self.create_timer(0.1, self.check_bark_queue)
         
         self.get_logger().info(f'Sensor Monitor Node initialized')
         self.get_logger().info(f'Will monitor {port} at {baudrate} baud')
-        self.get_logger().info(f'Behavior: Error → Walk Forward | Valid → Bark + Avoid Obstacle (Left 90° → Forward → Right 90°)')
+        self.get_logger().info(f'Behavior: Obstacle Detected (Valid Data) → Bark + Move Left Until Clear | Clear Path (Error) → Move Forward')
         
     def start_monitoring(self):
         """Start monitoring the serial port in a separate thread."""
@@ -103,26 +107,32 @@ class SensorMonitorNode(Node):
                             self.get_logger().info(f'[{timestamp}] Sensor 1: {sensor1_data} ({status})')
                             
                             if is_valid:
-                                # Valid data detected - obstacle avoidance maneuver
-                                if self.last_was_error:
-                                    self.get_logger().info('🔔 Sensor 1 recovered from error!')
-                                self.get_logger().info('✓ Valid data - Obstacle detected! Starting avoidance maneuver...')
-                                self.should_bark = True
-                                self.bark_queue.put('avoid_obstacle')
+                                # Valid data detected - obstacle is present
+                                if not self.avoiding_obstacle:
+                                    # First time detecting obstacle
+                                    self.get_logger().info('🔔 Obstacle detected!')
+                                    self.get_logger().info('🐕 Barking!')
+                                    self.bark_queue.put('bark')
+                                    self.avoiding_obstacle = True
+                                
+                                # Continue moving left while obstacle is present
+                                self.bark_queue.put('move_left')
                                 self.last_was_error = False
                             else:
-                                # Error detected - walk forward
-                                if not self.last_was_error:
-                                    self.get_logger().info('✗ Error detected - Walking Forward!')
-                                self.should_bark = False
-                                # Clear any pending bark commands
-                                while not self.bark_queue.empty():
-                                    try:
-                                        self.bark_queue.get_nowait()
-                                    except queue.Empty:
-                                        break
-                                # Walk forward when error
-                                self.bark_queue.put('walk_forward')
+                                # Error detected - path is clear
+                                if self.avoiding_obstacle:
+                                    # We were avoiding obstacle and now path is clear
+                                    self.get_logger().info('✓ Path is clear! Moving forward!')
+                                    self.bark_queue.put('move_forward')
+                                    self.avoiding_obstacle = False
+                                elif not self.last_was_error:
+                                    # Path was clear and still is, continue forward
+                                    self.bark_queue.put('move_forward')
+                                else:
+                                    # Just started, path is clear
+                                    self.get_logger().info('✗ No obstacle - Moving Forward!')
+                                    self.bark_queue.put('move_forward')
+                                
                                 self.last_was_error = True
                         else:
                             # Log raw data if we couldn't parse sensor 1
@@ -199,32 +209,30 @@ class SensorMonitorNode(Node):
     def check_bark_queue(self):
         """Timer callback to check for commands and execute them safely in ROS2 thread."""
         try:
-            # Process all pending commands from the queue
+            # Process only the most recent command from the queue
+            # Clear old commands and keep only the latest
+            latest_command = None
             while not self.bark_queue.empty():
-                command = self.bark_queue.get_nowait()
-                
-                if command == 'avoid_obstacle':
-                    # Obstacle detected - perform avoidance maneuver
-                    self.get_logger().info('🐕 Barking! Obstacle detected!')
+                try:
+                    latest_command = self.bark_queue.get_nowait()
+                except queue.Empty:
+                    break
+            
+            # Execute the latest command
+            if latest_command:
+                if latest_command == 'bark':
+                    # Bark when obstacle is first detected
+                    self.get_logger().info('🐕 Barking!')
                     self.pupper.bark()
                     
-                    # Step 1: Turn left 90 degrees
-                    self.get_logger().info('↰ Step 1: Turning left 90°')
-                    self.pupper.turn_left()
+                elif latest_command == 'move_left':
+                    # Keep moving left while obstacle is present
+                    self.get_logger().info('↰ Moving left (obstacle detected)')
+                    self.pupper.move_left()
                     
-                    # Step 2: Walk forward a moderate amount
-                    self.get_logger().info('➡️ Step 2: Walking forward')
-                    self.pupper.move_forward()
-                    
-                    # Step 3: Turn right 90 degrees (back to original direction)
-                    self.get_logger().info('↱ Step 3: Turning right 90° (returning to original heading)')
-                    self.pupper.turn_right()
-                    
-                    self.get_logger().info('✅ Obstacle avoidance maneuver complete!')
-                    
-                elif command == 'walk_forward':
-                    # Error detected - walk forward
-                    self.get_logger().info('➡️ Walking forward (no obstacle)')
+                elif latest_command == 'move_forward':
+                    # Path is clear - move forward
+                    self.get_logger().info('➡️ Moving forward (path clear)')
                     self.pupper.move_forward()
                     
         except queue.Empty:
@@ -265,9 +273,9 @@ def main(args=None):
     rclpy.init(args=args)
     
     # Create sensor monitor node for SENSOR 1 ONLY
-    # Sensor 1 is connected to /dev/ttyACM0 (Arduino)
+    # Sensor 1 is connected to /dev/ttyACM1 (Arduino)
     # This will only respond to data from sensor 1 and ignore other sensors
-    node = SensorMonitorNode(port='/dev/ttyACM0', baudrate=115200)
+    node = SensorMonitorNode(port='/dev/ttyACM1', baudrate=115200)
     
     try:
         # Start monitoring

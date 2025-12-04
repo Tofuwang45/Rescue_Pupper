@@ -182,7 +182,7 @@ class KarelPupper:
         - Publish the Twist command for a set duration, then stop.
         """
         move_cmd = Twist()
-        move_cmd.linear.x = 1.0
+        move_cmd.linear.x = 0.5
         move_cmd.angular.z = 0.0 
         self.publisher.publish(move_cmd)
         rclpy.spin_once(self.node, timeout_sec=1.0)
@@ -211,8 +211,13 @@ class KarelPupper:
         - Set an appropriate linear.y value for left strafe.
         - Use move() or build the move_cmd yourself.
         """
-        self.turn_left()
-        self.move_forward()
+        move_cmd = Twist()
+        move_cmd.linear.x = 0.0
+        move_cmd.linear.y = 0.5
+        move_cmd.angular.z = 0.0
+        self.publisher.publish(move_cmd)
+        rclpy.spin_once(self.node, timeout_sec=1.0)
+        self.node.get_logger().info('Move left...')
         self.stop()
 
     def move_right(self):

@@ -28,7 +28,7 @@ logger = logging.getLogger("thermal_tracker")
 # Configuration
 SAVED_IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'saved_images')
 IMAGE_CHECK_INTERVAL = 0.5  # Check for new images every 0.5 seconds
-CENTER_THRESHOLD = 0.05  # Consider centered if offset is within 5% of image width
+CENTER_THRESHOLD = 0.15 # Consider centered if offset is within 15% of image width (middle 30% of camera)
 MIN_ROTATION_OFFSET = 0.02  # Minimum offset to trigger rotation (2% of image width)
 
 
