@@ -182,7 +182,7 @@ class KarelPupper:
         - Publish the Twist command for a set duration, then stop.
         """
         move_cmd = Twist()
-        move_cmd.linear.x = 1.0
+        move_cmd.linear.x = 0.5
         move_cmd.angular.z = 0.0 
         self.publisher.publish(move_cmd)
         rclpy.spin_once(self.node, timeout_sec=1.0)
@@ -234,7 +234,7 @@ class KarelPupper:
         move_cmd = Twist()
         move_cmd.angular.z = 1.0  # Higher angular velocity for substantial rotation
         self.publisher.publish(move_cmd)
-        rclpy.spin_once(self.node, timeout_sec=0.8)  # Longer duration for actual rotation
+        rclpy.spin_once(self.node, timeout_sec=1.6)  # Longer duration for actual rotation
         self.stop()
 
     def turn_right(self):
@@ -246,7 +246,7 @@ class KarelPupper:
         move_cmd = Twist()
         move_cmd.angular.z = -1.0  # Higher angular velocity for substantial rotation
         self.publisher.publish(move_cmd)
-        rclpy.spin_once(self.node, timeout_sec=0.8)  # Longer duration for actual rotation
+        rclpy.spin_once(self.node, timeout_sec=1.6)  # Longer duration for actual rotation
         self.stop()
 
     def bark(self):
