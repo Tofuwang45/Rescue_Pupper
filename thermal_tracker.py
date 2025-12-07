@@ -31,6 +31,10 @@ IMAGE_CHECK_INTERVAL = 0.5  # Check for new images every 0.5 seconds
 CENTER_THRESHOLD = 0.15 # Consider centered if offset is within 15% of image width (middle 30% of camera)
 MIN_ROTATION_OFFSET = 0.02  # Minimum offset to trigger rotation (2% of image width)
 
+# End state detection - when pupper has reached the person
+HOT_PIXEL_COVERAGE_THRESHOLD = 0.15  # Stop when 15% of image is hot (person is close)
+HOT_PIXEL_INTENSITY_THRESHOLD = 0.85  # Pixels at 85% of max intensity count as "hot"
+
 
 class ThermalTracker:
     """Tracks the hottest region in thermal images and centers it."""
@@ -42,6 +46,7 @@ class ThermalTracker:
         self.last_image_path = None
         self.last_image_time = time.time()
         self.centered = False
+        self.reached_target = False  # End state - pupper has reached the person
         logger.info("Thermal Tracker initialized")
     
     def get_latest_image(self) -> str:
@@ -150,24 +155,112 @@ class ThermalTracker:
             logger.error(f"Error calculating offset: {e}")
             return 0.0
     
+    def calculate_hot_pixel_coverage(self, image_path: str) -> float:
+        """
+        Calculate what percentage of the image is covered by hot pixels.
+        Used to detect when pupper has reached the person (hot region is large).
+        
+        Args:
+            image_path: Path to the thermal image
+            
+        Returns:
+            float: Fraction of image covered by hot pixels (0.0 to 1.0)
+        """
+        try:
+            img = Image.open(image_path)
+            img_array = np.array(img)
+            
+            # Handle different image formats
+            if len(img_array.shape) == 2:
+                # Grayscale image
+                intensity = img_array.astype(np.float32)
+            elif len(img_array.shape) == 3:
+                # Color image - use same heat scoring as find_hottest_pixel
+                img_rgb = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+                h, s, v = img_rgb[:, :, 0], img_rgb[:, :, 1], img_rgb[:, :, 2]
+                
+                red_mask = (h < 30) | (h > 150)
+                heat_score = v.astype(np.float32) * (1.0 + s.astype(np.float32) / 255.0)
+                heat_score[red_mask] *= 1.5
+                intensity = heat_score
+            else:
+                return 0.0
+            
+            # Calculate threshold based on max intensity
+            max_intensity = np.max(intensity)
+            if max_intensity == 0:
+                return 0.0
+            
+            threshold = max_intensity * HOT_PIXEL_INTENSITY_THRESHOLD
+            
+            # Count hot pixels
+            hot_pixel_count = np.sum(intensity >= threshold)
+            total_pixels = intensity.size
+            
+            coverage = hot_pixel_count / total_pixels
+            return coverage
+            
+        except Exception as e:
+            logger.error(f"Error calculating hot pixel coverage: {e}")
+            return 0.0
+    
+    def check_reached_target(self, image_path: str) -> bool:
+        """
+        Check if pupper has reached the target (person is very close).
+        
+        Args:
+            image_path: Path to the thermal image
+            
+        Returns:
+            bool: True if target is reached (hot region covers enough of image)
+        """
+        coverage = self.calculate_hot_pixel_coverage(image_path)
+        logger.info(f"Hot pixel coverage: {coverage:.1%}")
+        
+        if coverage >= HOT_PIXEL_COVERAGE_THRESHOLD:
+            return True
+        return False
+    
+    def handle_reached_target(self):
+        """
+        Handle the end state when pupper has reached the person.
+        Stops movement and celebrates!
+        """
+        if not self.reached_target:
+            logger.info("🎉🎉🎉 TARGET REACHED! Person found! 🎉🎉🎉")
+            self.reached_target = True
+            
+            # Stop and celebrate
+            self.pupper.stop()
+            self.pupper.bark()
+            time.sleep(0.5)
+            self.pupper.bark()
+            self.pupper.wiggle()
+            
+            logger.info("🐕 Rescue Pupper has found the person!")
+        else:
+            # Stay stopped
+            self.pupper.stop()
+    
     def rotate_to_center(self, offset: float):
         """
         Rotate Pupper to center the hottest region using turn_left/turn_right methods.
+        When centered, move forward to approach the target.
         
         Args:
             offset: Normalized horizontal offset (-0.5 to 0.5)
                   Negative = hot region is left of center, Positive = right of center
         """
         if abs(offset) < CENTER_THRESHOLD:
-            # Already centered
+            # Already centered - move forward to approach target
             if not self.centered:
-                logger.info("🎯 Hot region is centered!")
+                logger.info("🎯 Hot region is centered! Moving forward to approach...")
                 self.centered = True
                 self.pupper.bark()
-                self.pupper.stop()
-            else:
-                # Keep stopped if already centered
-                self.pupper.stop()
+            
+            # Move forward toward the heat source
+            logger.info("➡️ Moving forward toward target...")
+            self.pupper.move_forward()
             return
         
         # Reset centered flag when we need to rotate
@@ -198,6 +291,16 @@ class ThermalTracker:
         """
         logger.info(f"Processing image: {os.path.basename(image_path)}")
         
+        # Check if we've reached the target (end state)
+        if self.check_reached_target(image_path):
+            self.handle_reached_target()
+            return
+        
+        # Reset reached_target if coverage drops (person moved away)
+        if self.reached_target:
+            logger.info("Target moved away, resuming tracking...")
+            self.reached_target = False
+        
         # Find hottest pixel
         hot_x, hot_y = self.find_hottest_pixel(image_path)
         
@@ -220,6 +323,7 @@ class ThermalTracker:
         logger.info(f"Monitoring directory: {SAVED_IMAGES_DIR}")
         logger.info(f"Image check interval: {IMAGE_CHECK_INTERVAL}s")
         logger.info(f"Center threshold: {CENTER_THRESHOLD}")
+        logger.info(f"Target reached threshold: {HOT_PIXEL_COVERAGE_THRESHOLD:.0%} hot pixel coverage")
         
         try:
             while True:
