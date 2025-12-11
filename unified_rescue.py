@@ -316,15 +316,15 @@ class SensorMonitor:
 def celebrate(pupper):
     """Celebrate reaching the target, then stop."""
     logger.info("=" * 60)
-    logger.info("🎯 TARGET REACHED! HOT PIXEL THRESHOLD EXCEEDED!")
+    logger.info("TARGET REACHED - Hot pixel threshold exceeded")
     logger.info("=" * 60)
     
     pupper.stop()
     time.sleep(0.2)
     
-    # Wiggle with excitement
+    # Wiggle celebration
     try:
-        logger.info("🎉 Wiggling with joy!")
+        logger.info("Executing victory wiggle")
         pupper.wiggle(wiggle_time=3, play_sound=False)
     except Exception as e:
         logger.warning(f"Could not wiggle: {e}")
@@ -334,18 +334,18 @@ def celebrate(pupper):
         pygame.mixer.init()
         success_path = os.path.join(os.path.dirname(__file__), 'success.wav')
         if os.path.exists(success_path):
-            logger.info(f"📢 Playing success sound")
+            logger.info("Playing success sound")
             sound = pygame.mixer.Sound(success_path)
             sound.play()
             time.sleep(5.0)
         else:
-            logger.info("📢 Woof woof! Target acquired! Mission accomplished!")
+            logger.info("Target acquired - Mission accomplished")
     except Exception as e:
         logger.error(f"Could not play sound: {e}")
-        logger.info("📢 Woof woof! Target acquired! Mission accomplished!")
+        logger.info("Target acquired - Mission accomplished")
     
     pupper.stop()
-    logger.info("🎉 MISSION COMPLETE - Shutting down")
+    logger.info("MISSION COMPLETE - Shutting down")
 
 
 # ============== MAIN CONTROL LOOP ==============
@@ -412,13 +412,13 @@ def run():
                     pupper.stop()
                 elif offset < 0:
                     # Hot region is LEFT of center, rotate RIGHT
-                    logger.info(f"↻ Rotating RIGHT (offset: {offset:.3f})")
+                    logger.info(f"Rotating RIGHT (offset: {offset:.3f})")
                     pupper.turn_right()
                     time.sleep(0.3)
                     pupper.stop()
                 else:
                     # Hot region is RIGHT of center, rotate LEFT
-                    logger.info(f"↺ Rotating LEFT (offset: {offset:.3f})")
+                    logger.info(f"Rotating LEFT (offset: {offset:.3f})")
                     pupper.turn_left()
                     time.sleep(0.3)
                     pupper.stop()
@@ -426,7 +426,7 @@ def run():
             # --- Step 6: If centered, check obstacles and move ---
             else:
                 if not centered:
-                    logger.info("🎯 Centered on target!")
+                    logger.info("Centered on target")
                     pupper.bark()
                     centered = True
                 
@@ -436,35 +436,35 @@ def run():
                 # Check for obstacles (EITHER sensor)
                 if sensor_monitor.obstacle_detected():
                     if not avoiding_obstacle:
-                        logger.info("⚠️ Obstacle detected! Barking!")
+                        logger.info("Obstacle detected - initiating avoidance")
                         pupper.bark()
                         avoiding_obstacle = True
                     
-                    # Keep moving left IN A LOOP until obstacle is cleared
+                    # Keep moving left until obstacle is cleared
                     move_count = 0
                     max_moves = 30  # Safety limit to prevent infinite loop
                     
                     while sensor_monitor.obstacle_detected() and move_count < max_moves:
                         move_count += 1
-                        logger.info(f"↰ Moving left (avoiding obstacle, move #{move_count})")
+                        logger.info(f"Avoiding obstacle: move left #{move_count}")
                         pupper.move_left()
                         time.sleep(0.1)  # Brief pause to let sensor update
                     
                     pupper.stop()
                     
                     if move_count >= max_moves:
-                        logger.warning(f"⚠️ Hit max avoidance moves ({max_moves}), stopping")
+                        logger.warning(f"Hit max avoidance moves ({max_moves}), stopping")
                     else:
-                        logger.info(f"✓ Obstacle cleared after {move_count} moves")
+                        logger.info(f"Obstacle cleared after {move_count} moves")
                     
                     avoiding_obstacle = False
                 else:
                     # Path is clear
                     if avoiding_obstacle:
-                        logger.info("✓ Path now clear after avoiding obstacle!")
+                        logger.info("Path now clear after avoiding obstacle")
                         avoiding_obstacle = False
                     
-                    logger.info("✓ Path clear! Moving forward (small step)")
+                    logger.info("Path clear - moving forward")
                     pupper.move_forward(duration=0.4)  # Smaller, more granular movement
                     pupper.stop()
                     
