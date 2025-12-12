@@ -42,7 +42,6 @@ log/
 build/
 
 # files
-*.png
 *.tmp
 *.bak
 *.backup
