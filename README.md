@@ -9,6 +9,9 @@ This repository contains the code for Rescue Pupper, an autonomous quadruped rob
 
 View our [project presentation](https://docs.google.com/presentation/d/1aVbiru1K8rmNrG0vTwg09F6D1UuEJeRCS3enNGCvNXs/edit?usp=sharing)
 
+
+[See Rescue Pupper in action!](https://drive.google.com/file/d/1rf32BR1Iuds5kfqpEo8nAXuIIpnnlGV4/view?usp=sharing)
+
 ## Project Overview
 
 Rescue Pupper combines thermal imaging with obstacle avoidance to autonomously navigate toward heat sources. The system:
