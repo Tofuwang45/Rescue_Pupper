@@ -32,7 +32,6 @@ The structure of the repo is as follows:
   * `karel/karel.py`: High-level robot commands (move, turn, bark, wiggle, dance, etc.)
 * `config/`: API key configuration for OpenAI integration
 * `sounds/`: Audio files for robot feedback (bark, wiggle, celebration sounds)
-* `send_sms.py`: Twilio integration for sending SMS alerts when target is found
 
 ## Setup
 
@@ -66,7 +65,6 @@ Key dependencies include:
 
 2. Edit `config/api_keys.py` and add your OpenAI API key for voice control features.
 
-3. For SMS alerts, update `send_sms.py` with your Twilio credentials.
 
 ## Running the System
 
