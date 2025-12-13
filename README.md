@@ -68,9 +68,59 @@ Key dependencies include:
 
 ## Running the System
 
-### Step 1: Launch ROS2 Control System
+### Step 1: Setup Thermal Camera
 
-Start the robot control nodes and camera:
+The thermal camera system uses a Waveshare Thermal-Camera-ESP32-Module with ESP-IDF firmware and a Node.js TCP client for image streaming.
+
+#### 1.1 Flash ESP32 Firmware
+
+Navigate to the thermal camera firmware folder:
+
+```bash
+cd thermal_camera
+```
+
+Build and flash the firmware using VSCode with ESP-IDF extension (version 5.2.x only):
+
+1. Open the folder in VSCode with ESP-IDF extension installed
+2. Configure Wi-Fi settings via `idf.py menuconfig` → Example Configuration
+3. Build: `Ctrl+Shift+P` → "ESP-IDF: Build your project"
+4. Flash: `Ctrl+Shift+P` → "ESP-IDF: Flash your project"
+5. Monitor: `Ctrl+Shift+P` → "ESP-IDF: Monitor your project"
+
+**Note:** Ensure the ESP32 connects to Wi-Fi and starts its TCP server on port 3333.
+
+#### 1.2 Start Thermal Camera Viewer
+
+Navigate to the Node.js viewer:
+
+```bash
+cd ESP32_Thermal_Camera_Viewer
+cd Node_Thermal_TCP
+```
+
+Edit `client.js` if needed to update the ESP32 IP address:
+
+```javascript
+const ESP32_HOST = "192.168.x.x"; // Your ESP32's local IP
+```
+
+Start the thermal camera client:
+
+```bash
+node client.js
+```
+
+This will:
+- Connect to the ESP32's TCP server on port 3333
+- Host a web viewer at `http://localhost:8080`
+- Automatically save thermal images to the `saved_images/` folder in the `Rescue_Pupper` directory for analysis
+
+The embedded script in `client.js` streams thermal camera data directly to the rescue controller for real-time thermal tracking.
+
+### Step 2: Launch ROS2 Control System
+
+Start the robot control nodes:
 
 ```bash
 ros2 launch lab_7.launch.py
@@ -79,9 +129,9 @@ ros2 launch lab_7.launch.py
 This launches:
 - Robot state publisher
 - Neural controller for locomotion
-- Camera node for thermal imaging
+- Camera node for visual feedback
 
-### Step 2: Run the Rescue Controller
+### Step 3: Run the Rescue Controller
 
 In a separate terminal, run the unified rescue controller:
 
@@ -90,7 +140,7 @@ python3 unified_rescue.py
 ```
 
 The controller will:
-1. Monitor the `saved_images/` folder for thermal images
+1. Monitor the `saved_images/` folder for thermal images from the Node.js client
 2. Identify the hottest region in each frame
 3. Rotate to center the heat source
 4. Navigate forward while avoiding obstacles
